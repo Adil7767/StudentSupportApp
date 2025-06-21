@@ -5,24 +5,36 @@
  * @format
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
+import 'react-native-gesture-handler';
+import React from 'react';
+import { StatusBar, ActivityIndicator, View } from 'react-native';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import AppNavigator from './src/navigation/AppNavigator';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+const AppContent = () => {
+  const { token, loading } = useAuth();
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <NewAppScreen templateFileName="App.tsx" />
-    </View>
-  );
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return <AppNavigator isAuthenticated={!!token} />;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+const App = () => {
+  return (
+    <GestureHandlerRootView style={{flex: 1}}>
+      <AuthProvider>
+        <StatusBar barStyle="light-content" backgroundColor="#2196F3" />
+        <AppContent />
+      </AuthProvider>
+    </GestureHandlerRootView>
+  );
+};
 
 export default App;

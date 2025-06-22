@@ -1,134 +1,186 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
-  View,
-  Text,
   SafeAreaView,
   FlatList,
-  TouchableOpacity,
-  Linking,
+  View,
+  Alert,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Appbar, Card, Paragraph, Avatar, FAB, ActivityIndicator, Text } from 'react-native-paper';
+import { getEvents, getPosts, deleteEvent, deletePost } from '../services/api'; // Assuming delete functions are in api
+import { useAuth } from '../contexts/AuthContext';
+import { useIsFocused } from '@react-navigation/native';
+import { StackScreenProps } from '@react-navigation/stack';
+import { CommunityStackParamList } from '../navigation/AppNavigator';
 
-const communityEvents = [
-  {
-    id: '1',
-    title: 'Tech Club Meetup',
-    description: 'Join us for a talk on the future of AI. All majors welcome.',
-    icon: 'laptop-outline',
-    date: 'Oct 28, 2023',
-    url: 'https://example.com/event1',
-  },
-  {
-    id: '2',
-    title: 'Career Fair',
-    description: 'Meet recruiters from top companies in the region.',
-    icon: 'briefcase-outline',
-    date: 'Nov 5, 2023',
-    url: 'https://example.com/event2',
-  },
-  {
-    id: '3',
-    title: 'Campus Movie Night',
-    description: 'Free screening of a blockbuster hit on the main lawn.',
-    icon: 'film-outline',
-    date: 'Nov 12, 2023',
-    url: 'https://example.com/event3',
-  },
-];
+type Props = StackScreenProps<CommunityStackParamList, 'CommunityList'>;
 
-const CommunityScreen = () => {
-    const renderItem = ({ item }: { item: typeof communityEvents[0] }) => (
-        <TouchableOpacity style={styles.card} onPress={() => Linking.openURL(item.url)}>
-          <View style={styles.iconContainer}>
-            <Icon name={item.icon} size={30} color="#e67e22" />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardDescription}>{item.description}</Text>
-            <View style={styles.dateContainer}>
-              <Icon name="calendar-outline" size={16} color="#999" />
-              <Text style={styles.dateText}>{item.date}</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      );
-    
-      return (
-        <SafeAreaView style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Community Hub</Text>
-          </View>
-          <FlatList
-            data={communityEvents}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-          />
-        </SafeAreaView>
-      );
+interface Item {
+  _id: string;
+  title: string;
+  description?: string;
+  content?: string;
+  date?: string;
+  createdAt: string;
+  userId: string;
+  userName?: string;
+  type: 'event' | 'post';
+}
+
+const CommunityScreen = ({ navigation }: Props) => {
+  const { user } = useAuth();
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const isFocused = useIsFocused();
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [eventsRes, postsRes] = await Promise.all([getEvents(), getPosts()]);
+      
+      const events: Item[] = eventsRes.data.map((e: any) => ({ ...e, type: 'event' }));
+      const posts: Item[] = postsRes.data.map((p: any) => ({ ...p, type: 'post' }));
+
+      // Assuming posts and events have a 'date' or 'createdAt' field to sort by
+      const combined = [...events, ...posts].sort((a, b) => new Date(b.createdAt || b.date || 0).getTime() - new Date(a.createdAt || a.date || 0).getTime());
+      setItems(combined);
+    } catch (error) {
+      console.error("Failed to fetch community data", error);
+      Alert.alert("Error", "Could not load community data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isFocused) {
+      fetchData();
+    }
+  }, [isFocused]);
+
+  const handleDelete = async (item: Item) => {
+    Alert.alert(
+      `Delete ${item.type}`,
+      `Are you sure you want to delete "${item.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (item.type === 'event') {
+                await deleteEvent(item._id); // Assuming items have _id
+              } else {
+                await deletePost(item._id);
+              }
+              fetchData(); // Refresh list
+            } catch (error) {
+              console.error('Failed to delete item', error);
+              Alert.alert('Error', 'Could not delete item.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderItem = ({ item }: { item: Item }) => {
+    const canModify = user && (user.id === item.userId || user.role === 'admin');
+    const icon = item.type === 'event' ? 'calendar' : 'message-text';
+
+    return (
+      <Card style={styles.card}>
+        <Card.Title
+          title={item.title}
+          subtitle={item.type === 'event' ? `Event on ${new Date(item.date || 0).toLocaleDateString()}` : `Posted by ${item.userName || 'a user'}`}
+          left={(props) => <Avatar.Icon {...props} icon={icon} />}
+        />
+        <Card.Content>
+          <Paragraph>{item.description || item.content}</Paragraph>
+        </Card.Content>
+        {canModify && (
+          <Card.Actions>
+            <FAB
+              icon="pencil"
+              style={styles.fabEdit}
+              onPress={() => navigation.navigate('CreateItem', { item: item, type: item.type })}
+            />
+            <FAB
+              icon="delete"
+              style={styles.fabDelete}
+              onPress={() => handleDelete(item)}
+            />
+          </Card.Actions>
+        )}
+      </Card>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Appbar.Header>
+        <Appbar.Content title="Community Hub" />
+      </Appbar.Header>
+      <FlatList
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={(item) => item._id} // Assuming items have _id
+        contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={<Text style={styles.emptyText}>No events or posts yet.</Text>}
+      />
+      {user && (
+        <FAB
+          style={styles.fab}
+          icon="plus"
+          onPress={() => navigation.navigate('CreateItem')}
+        />
+      )}
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#f0f4f8',
-    },
-    header: {
-      backgroundColor: '#e67e22',
-      padding: 20,
-      paddingTop: 40,
-      alignItems: 'center',
-    },
-    headerTitle: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      color: 'white',
-    },
-    listContainer: {
-      padding: 20,
-    },
-    card: {
-      flexDirection: 'row',
-      backgroundColor: 'white',
-      borderRadius: 12,
-      padding: 20,
-      marginBottom: 15,
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.2,
-      shadowRadius: 1.41,
-    },
-    iconContainer: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 20,
-    },
-    cardContent: {
-      flex: 1,
-    },
-    cardTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#333',
-    },
-    cardDescription: {
-      fontSize: 14,
-      color: '#666',
-      marginTop: 4,
-      marginBottom: 10,
-    },
-    dateContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 5,
-    },
-    dateText: {
-        marginLeft: 5,
-        fontSize: 12,
-        color: '#666',
-    },
-  });
+  container: {
+    flex: 1,
+  },
+  listContainer: {
+    padding: 20,
+    paddingBottom: 80, // Space for FAB
+  },
+  card: {
+    marginBottom: 15,
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+  },
+  fabEdit: {
+    marginRight: 8,
+    backgroundColor: '#4CAF50'
+  },
+  fabDelete: {
+    backgroundColor: '#F44336'
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+  }
+});
 
 export default CommunityScreen; 

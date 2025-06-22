@@ -1,20 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
   SafeAreaView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Appbar, TextInput, IconButton, Text, Card, Paragraph } from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
-
-const API_BASE_URL = 'https://api-student-support-app.vercel.app/api';
+import { sendChatMessage } from '../services/api';
 
 interface Message {
   id: string;
@@ -24,36 +20,39 @@ interface Message {
 
 const MentalHealthScreen = () => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    { id: 'initial', text: 'Hello! I am your AI Wellness Coach. How are you feeling today?', sender: 'ai' }
+  ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const sendMessage = async () => {
+  useEffect(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, [messages]);
+
+  const handleSendMessage = async () => {
     if (!input.trim()) return;
 
     const userMessage: Message = { id: Date.now().toString(), text: input, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
+    const messageToSend = input;
     setInput('');
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/mental-health/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input, userId: user?.id }),
-      });
-      const data = await response.json();
-      
-      const aiMessage: Message = { id: (Date.now() + 1).toString(), text: data.response, sender: 'ai' };
-      setMessages(prev => [...prev, aiMessage]);
+      const response = await sendChatMessage({ message: messageToSend, userId: user?.id });
+      const aiMessage: Message = { id: (Date.now() + 1).toString(), text: response.data.response, sender: 'ai' };
+      setMessages(prev => [...prev, userMessage, aiMessage]);
 
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessageText = error.response?.data?.message || 'Sorry, I couldn\'t connect to the server. Please try again.';
       const errorMessage: Message = { 
         id: (Date.now() + 1).toString(), 
-        text: 'Sorry, I couldn\'t connect to the server. Please try again.', 
+        text: errorMessageText, 
         sender: 'ai' 
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, userMessage, errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -61,31 +60,39 @@ const MentalHealthScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-            <Text style={styles.headerTitle}>AI Wellness Coach</Text>
-            <Text style={styles.headerSubtitle}>Here to help, 24/7</Text>
-        </View>
+        <Appbar.Header>
+            <Appbar.Content title="AI Wellness Coach" subtitle="Here to help, 24/7" />
+        </Appbar.Header>
 
         <KeyboardAvoidingView 
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.chatContainer}
-            keyboardVerticalOffset={90}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
-            <ScrollView contentContainerStyle={styles.messagesContainer}>
+            <ScrollView 
+              ref={scrollViewRef}
+              contentContainerStyle={styles.messagesContainer}
+              onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            >
                 {messages.map(msg => (
-                <View
-                    key={msg.id}
-                    style={[
-                    styles.messageBubble,
-                    msg.sender === 'user' ? styles.userBubble : styles.aiBubble,
-                    ]}
-                >
-                    <Text style={msg.sender === 'user' ? styles.userText : styles.aiText}>
-                    {msg.text}
-                    </Text>
-                </View>
+                  <View
+                      key={msg.id}
+                      style={[
+                        styles.messageWrapper,
+                        msg.sender === 'user' ? styles.userWrapper : styles.aiWrapper,
+                      ]}
+                  >
+                    <Card style={[
+                        styles.messageBubble,
+                        msg.sender === 'user' ? styles.userBubble : styles.aiBubble,
+                    ]}>
+                        <Paragraph style={msg.sender === 'user' ? styles.userText : styles.aiText}>
+                            {msg.text}
+                        </Paragraph>
+                    </Card>
+                  </View>
                 ))}
-                {loading && <ActivityIndicator style={{marginTop: 10}} size="small" color="#2196F3" />}
+                {loading && <ActivityIndicator style={{marginTop: 10}} size="small" />}
             </ScrollView>
 
             <View style={styles.inputContainer}>
@@ -94,11 +101,14 @@ const MentalHealthScreen = () => {
                     value={input}
                     onChangeText={setInput}
                     placeholder="How are you feeling?"
-                    placeholderTextColor="#999"
+                    multiline
                 />
-                <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-                    <Icon name="arrow-up-circle" size={36} color="#2196F3" />
-                </TouchableOpacity>
+                <IconButton
+                    icon="send"
+                    size={28}
+                    onPress={handleSendMessage}
+                    disabled={loading}
+                />
             </View>
         </KeyboardAvoidingView>
     </SafeAreaView>
@@ -110,49 +120,34 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f0f4f8',
     },
-    header: {
-        backgroundColor: '#4CAF50',
-        padding: 20,
-        paddingTop: 40,
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: 'white',
-        opacity: 0.9,
-        marginTop: 4,
-    },
     chatContainer: {
         flex: 1,
     },
     messagesContainer: {
         padding: 10,
+        flexGrow: 1,
+        justifyContent: 'flex-end',
+    },
+    messageWrapper: {
+        flexDirection: 'row',
+        marginBottom: 10,
+    },
+    userWrapper: {
+        justifyContent: 'flex-end',
+    },
+    aiWrapper: {
+        justifyContent: 'flex-start',
     },
     messageBubble: {
-        maxWidth: '80%',
-        padding: 15,
-        borderRadius: 20,
-        marginBottom: 10,
+        maxWidth: '85%',
+        padding: 8,
+        borderRadius: 12,
     },
     userBubble: {
         backgroundColor: '#2196F3',
-        alignSelf: 'flex-end',
-        borderBottomRightRadius: 5,
     },
     aiBubble: {
         backgroundColor: '#FFFFFF',
-        alignSelf: 'flex-start',
-        borderBottomLeftRadius: 5,
-        elevation: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 1,
     },
     userText: {
         color: 'white',
@@ -165,23 +160,16 @@ const styles = StyleSheet.create({
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 10,
+        padding: 8,
         backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
     },
     input: {
         flex: 1,
         backgroundColor: '#f0f4f8',
-        borderRadius: 25,
-        paddingHorizontal: 20,
-        paddingVertical: 12,
+        borderRadius: 20,
+        paddingHorizontal: 12,
         fontSize: 16,
-        marginRight: 10,
-    },
-    sendButton: {
-        justifyContent: 'center',
-        alignItems: 'center',
+        maxHeight: 100
     },
 });
 

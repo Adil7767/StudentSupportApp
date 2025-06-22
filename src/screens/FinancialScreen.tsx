@@ -1,14 +1,11 @@
 import React from 'react';
 import {
   StyleSheet,
-  View,
-  Text,
   SafeAreaView,
   FlatList,
-  TouchableOpacity,
   Linking,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Appbar, Card, Paragraph, Avatar } from 'react-native-paper';
 
 const financialResources = [
   {
@@ -43,24 +40,25 @@ const financialResources = [
 
 const FinancialScreen = () => {
   const renderItem = ({ item }: { item: typeof financialResources[0] }) => (
-    <TouchableOpacity
+    <Card
       style={styles.card}
       onPress={() => Linking.openURL(item.url)}
     >
-      <Icon name={item.icon} size={30} color="#27ae60" />
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardDescription}>{item.description}</Text>
-      </View>
-      <Icon name="chevron-forward" size={24} color="#ccc" />
-    </TouchableOpacity>
+        <Card.Title
+            title={item.title}
+            left={(props) => <Avatar.Icon {...props} icon={item.icon} />}
+        />
+        <Card.Content>
+            <Paragraph>{item.description}</Paragraph>
+        </Card.Content>
+    </Card>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Financial Resources</Text>
-      </View>
+      <Appbar.Header>
+          <Appbar.Content title="Financial Resources" />
+      </Appbar.Header>
       <FlatList
         data={financialResources}
         renderItem={renderItem}
@@ -74,48 +72,12 @@ const FinancialScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f4f8',
-  },
-  header: {
-    backgroundColor: '#27ae60',
-    padding: 20,
-    paddingTop: 40,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: 'white',
   },
   listContainer: {
     padding: 20,
   },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
     marginBottom: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-  },
-  cardContent: {
-    flex: 1,
-    marginLeft: 20,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
   },
 });
 

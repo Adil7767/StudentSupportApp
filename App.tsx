@@ -11,10 +11,13 @@ import { StatusBar, ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Provider as PaperProvider } from 'react-native-paper';
 
 const AppContent = () => {
   const { token, loading } = useAuth();
-
+  console.log('TEST LOG: This should appear in the browser console!');
+  console.error('TEST ERROR: This should also appear in the browser console!');
+  console.warn('TEST WARNING: This should appear in the browser console!');
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -29,10 +32,12 @@ const AppContent = () => {
 const App = () => {
   return (
     <GestureHandlerRootView style={{flex: 1}}>
-      <AuthProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#2196F3" />
-        <AppContent />
-      </AuthProvider>
+      <PaperProvider>
+        <AuthProvider>
+          <StatusBar barStyle="light-content" backgroundColor="#2196F3" />
+          <AppContent />
+        </AuthProvider>
+      </PaperProvider>
     </GestureHandlerRootView>
   );
 };

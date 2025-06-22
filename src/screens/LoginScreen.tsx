@@ -2,20 +2,18 @@ import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   Alert,
   SafeAreaView,
-  StatusBar,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Spinner from 'react-native-loading-spinner-overlay';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../contexts/AuthContext';
+import { TextInput, Button, Text, useTheme } from 'react-native-paper';
+import { loginUser } from '../services/api';
 
 const API_BASE_URL = 'https://api-student-support-app.vercel.app/api';
 
@@ -39,6 +37,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const theme = useTheme();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -47,71 +46,65 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        await login(data.token, data.user);
-      } else {
-        Alert.alert('Login Failed', data.message || 'An unknown error occurred.');
-      }
-    } catch (error) {
-      Alert.alert('Network Error', 'Unable to connect to the server.');
+      const response = await loginUser({ email, password });
+      await login(response.data.token, response.data.user);
+    } catch (error: any) {
+      console.error(error,'error')
+      const message = error.response?.data?.message || 'An unknown error occurred.';
+      Alert.alert('Login Failed', message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Spinner visible={loading} textContent={'Logging In...'} textStyle={styles.spinnerTextStyle} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <View style={styles.headerContainer}>
+        <View style={[styles.headerContainer, { backgroundColor: theme.colors.primary }]}>
             <Icon name="school" size={80} color="#fff" />
             <Text style={styles.headerTitle}>Student Support Hub</Text>
             <Text style={styles.headerSubtitle}>Your partner in success</Text>
         </View>
 
         <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-                <Icon name="mail-outline" size={22} color="#666" style={styles.inputIcon} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email Address"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    placeholderTextColor="#999"
-                />
-            </View>
-            <View style={styles.inputContainer}>
-                <Icon name="lock-closed-outline" size={22} color="#666" style={styles.inputIcon} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    placeholderTextColor="#999"
-                />
-            </View>
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                <Text style={styles.buttonText}>Login</Text>
-            </TouchableOpacity>
+            <TextInput
+                label="Email Address"
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                left={<TextInput.Icon icon="email" />}
+            />
+            <TextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                style={styles.input}
+                left={<TextInput.Icon icon="lock" />}
+            />
+            <Button
+                mode="contained"
+                onPress={handleLogin}
+                style={styles.button}
+                labelStyle={styles.buttonText}
+                loading={loading}
+                disabled={loading}
+            >
+                Login
+            </Button>
         </View>
 
         <View style={styles.footer}>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
                 <Text style={styles.footerText}>
-                Don't have an account? <Text style={styles.linkText}>Register Now</Text>
+                Don't have an account?{' '}
+                <Text style={[styles.linkText, { color: theme.colors.primary }]}>Register Now</Text>
                 </Text>
             </TouchableOpacity>
         </View>
@@ -123,7 +116,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f0f4f8',
     },
     keyboardAvoidingView: {
         flex: 1,
@@ -132,7 +124,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#2196F3',
         padding: 40,
     },
     headerTitle: {
@@ -151,41 +142,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 30,
         paddingTop: 40,
     },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'white',
-        borderRadius: 12,
-        marginBottom: 15,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 1.41,
-    },
-    inputIcon: {
-        paddingHorizontal: 15,
-    },
     input: {
-        flex: 1,
-        paddingVertical: 15,
-        fontSize: 16,
-        color: '#333',
+        marginBottom: 15,
     },
     button: {
-        backgroundColor: '#FF9800',
-        borderRadius: 12,
-        paddingVertical: 18,
-        alignItems: 'center',
+        paddingVertical: 8,
         marginTop: 20,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
     },
     buttonText: {
-        color: 'white',
         fontSize: 18,
         fontWeight: 'bold',
     },
@@ -196,11 +160,9 @@ const styles = StyleSheet.create({
         flex: 1
     },
     footerText: {
-        color: '#666',
         fontSize: 14,
     },
     linkText: {
-        color: '#2196F3',
         fontWeight: 'bold',
     },
     spinnerTextStyle: {

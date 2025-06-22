@@ -1,5 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
+import { useState } from 'react';
+
+interface Item {
+  _id: string;
+  title: string;
+  description?: string;
+  content?: string;
+  date?: string;
+  createdAt: string;
+  userId: string;
+  userName?: string;
+  type: 'event' | 'post';
+}
 
 const API_BASE_URL = 'https://api-student-support-app.vercel.app/api';
 
@@ -39,7 +52,9 @@ export const loginUser = async (credentials: Credentials) => {
       headers,
       body: JSON.stringify(credentials),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('loginUser response:', data);
+    return data;
   } catch (error) {
     Alert.alert(`Error ${error}`)
     console.error('loginUser error:',error);
@@ -55,7 +70,9 @@ export const registerUser = async (userData: { name: string; email: string; pass
       headers,
       body: JSON.stringify(userData),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('registerUser response:', data);
+    return data;
   } catch (error) {
     console.error('registerUser error:', error);
     throw error;
@@ -69,7 +86,13 @@ export const getEvents = async () => {
       method: 'GET',
       headers,
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('getEvents response:', data);
+    const events: Item[] = data.map((e: any) => ({
+      ...e,
+      type: 'event'
+    }));
+    return events;
   } catch (error) {
     console.error('getEvents error:', error);
     throw error;
@@ -84,7 +107,9 @@ export const createEvent = async (eventData: any) => {
       headers,
       body: JSON.stringify(eventData),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('createEvent response:', data);
+    return data;
   } catch (error) {
     console.error('createEvent error:', error);
     throw error;
@@ -99,7 +124,9 @@ export const updateEvent = async (id: any, eventData: any) => {
       headers,
       body: JSON.stringify(eventData),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('updateEvent response:', data);
+    return data;
   } catch (error) {
     console.error('updateEvent error:', error);
     throw error;
@@ -113,7 +140,9 @@ export const deleteEvent = async (id: string) => {
       method: 'DELETE',
       headers,
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('deleteEvent response:', data);
+    return data;
   } catch (error) {
     console.error('deleteEvent error:', error);
     throw error;
@@ -127,7 +156,13 @@ export const getPosts = async () => {
       method: 'GET',
       headers,
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('getPosts response:', data);
+    const posts: Item[] = data.map((p: any) => ({
+      ...p,
+      type: 'post'
+    }));
+    return posts;
   } catch (error) {
     console.error('getPosts error:', error);
     throw error;
@@ -142,7 +177,9 @@ export const createPost = async (postData: any) => {
       headers,
       body: JSON.stringify(postData),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('createPost response:', data);
+    return data;
   } catch (error) {
     console.error('createPost error:', error);
     throw error;
@@ -157,7 +194,9 @@ export const updatePost = async (id: any, postData: any) => {
       headers,
       body: JSON.stringify(postData),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('updatePost response:', data);
+    return data;
   } catch (error) {
     console.error('updatePost error:', error);
     throw error;
@@ -171,7 +210,9 @@ export const deletePost = async (id: string) => {
       method: 'DELETE',
       headers,
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('deletePost response:', data);
+    return data;
   } catch (error) {
     console.error('deletePost error:', error);
     throw error;
@@ -186,7 +227,9 @@ export const sendChatMessage = async (messageData: { message: string; userId: st
       headers,
       body: JSON.stringify(messageData),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('sendChatMessage response:', data);
+    return data;
   } catch (error) {
     console.error('sendChatMessage error:', error);
     throw error;

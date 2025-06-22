@@ -7,11 +7,14 @@
 
 import 'react-native-gesture-handler';
 import React from 'react';
-import { StatusBar, ActivityIndicator, View } from 'react-native';
+import { StatusBar, ActivityIndicator, View, LogBox } from 'react-native';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider as PaperProvider } from 'react-native-paper';
+
+// Disable all LogBox warnings and errors
+LogBox.ignoreAllLogs(true);
 
 const AppContent = () => {
   const { token, loading } = useAuth();

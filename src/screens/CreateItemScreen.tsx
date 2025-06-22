@@ -16,6 +16,8 @@ const CreateItemScreen = ({ route, navigation }: Props) => {
   const [title, setTitle] = useState(item?.title || '');
   const [content, setContent] = useState(item?.content || item?.description || '');
   const [date, setDate] = useState(item?.date ? new Date(item.date).toISOString().substring(0, 10) : '');
+  const [category, setCategory] = useState(item?.category || '');
+  const [location, setLocation] = useState(item?.location || '');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -34,9 +36,12 @@ const CreateItemScreen = ({ route, navigation }: Props) => {
 
     if (type === 'post') {
       data.content = content;
+      data.category = category;
     } else {
       data.description = content;
       data.date = new Date(date).toISOString();
+      data.category = category;
+      data.location = location;
     }
 
 
@@ -97,15 +102,31 @@ const CreateItemScreen = ({ route, navigation }: Props) => {
           numberOfLines={5}
           style={styles.input}
         />
+        <TextInput
+          label="Category"
+          value={category}
+          onChangeText={setCategory}
+          mode="outlined"
+          style={styles.input}
+        />
         {type === 'event' && (
-          <TextInput
-            label="Event Date (YYYY-MM-DD)"
-            value={date}
-            onChangeText={setDate}
-            mode="outlined"
-            style={styles.input}
-            keyboardType="numeric"
-          />
+          <>
+            <TextInput
+              label="Event Date (YYYY-MM-DD)"
+              value={date}
+              onChangeText={setDate}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="numeric"
+            />
+            <TextInput
+              label="Location"
+              value={location}
+              onChangeText={setLocation}
+              mode="outlined"
+              style={styles.input}
+            />
+          </>
         )}
         <Button
           mode="contained"

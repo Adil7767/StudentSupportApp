@@ -47,10 +47,15 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     setLoading(true);
     try {
       const response = await loginUser({ email, password });
-      await login(response.data.token, response.data.user);
+      console.log('Login response:', response);
+      if (response && response.token && response.user) {
+        await login(response.token, response.user);
+      } else {
+        Alert.alert('Login Failed', 'Invalid credentials or server error.');
+      }
     } catch (error: any) {
-      console.error(error,'error')
-      const message = error.response?.data?.message || 'An unknown error occurred.';
+      console.error('loginUser error:', error);
+      const message = error?.message || 'An unknown error occurred.';
       Alert.alert('Login Failed', message);
     } finally {
       setLoading(false);

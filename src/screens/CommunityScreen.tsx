@@ -37,16 +37,18 @@ const CommunityScreen = ({ navigation }: Props) => {
     try {
       setLoading(true);
       const [eventsRes, postsRes] = await Promise.all([getEvents(), getPosts()]);
-      
-      const events: Item[] = eventsRes.data.map((e: any) => ({ ...e, type: 'event' }));
-      const posts: Item[] = postsRes.data.map((p: any) => ({ ...p, type: 'post' }));
-
+      // Ensure .data is always an array
+      const eventsArr = Array.isArray(eventsRes) ? eventsRes : [];
+      const postsArr = Array.isArray(postsRes) ? postsRes : [];
+     
       // Assuming posts and events have a 'date' or 'createdAt' field to sort by
-      const combined = [...events, ...posts].sort((a, b) => new Date(b.createdAt || b.date || 0).getTime() - new Date(a.createdAt || a.date || 0).getTime());
+      const combined = [...eventsArr, ...postsArr].sort((a, b) => new Date(b.createdAt || b.date || 0).getTime() - new Date(a.createdAt || a.date || 0).getTime());
+      console.log('Combined items for UI:', combined);
       setItems(combined);
     } catch (error) {
       console.error("Failed to fetch community data", error);
       Alert.alert("Error", "Could not load community data.");
+      setItems([]); // Always set to array on error
     } finally {
       setLoading(false);
     }
